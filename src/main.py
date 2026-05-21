@@ -62,7 +62,12 @@ def main() -> None:
 
     glfw.set_cursor_pos_callback(window.window, mouse_callback)
 
+    time_scale = 1.0
+    current_scenario = 1
+    N_PARTICLES = 10000
+
     def process_input(win, delta_time):
+        nonlocal time_scale
         if glfw.get_key(win, glfw.KEY_ESCAPE) == glfw.PRESS:
             glfw.set_window_should_close(win, True)
             
@@ -74,6 +79,14 @@ def main() -> None:
             camera.process_keyboard("LEFT", delta_time)
         if glfw.get_key(win, glfw.KEY_D) == glfw.PRESS:
             camera.process_keyboard("RIGHT", delta_time)
+            
+        # Time scaling
+        if glfw.get_key(win, glfw.KEY_UP) == glfw.PRESS:
+            time_scale += 0.5 * delta_time
+        if glfw.get_key(win, glfw.KEY_DOWN) == glfw.PRESS:
+            time_scale -= 0.5 * delta_time
+            if time_scale < 0.0:
+                time_scale = 0.0
 
     # Cube vertices (position: 3 floats, color: 3 floats)
     vertices = np.array([
@@ -141,45 +154,62 @@ def main() -> None:
     gl.glVertexAttribPointer(1, 3, gl.GL_FLOAT, gl.GL_FALSE, 6 * vertices.itemsize, gl.ctypes.c_void_p(3 * vertices.itemsize))
     gl.glEnableVertexAttribArray(1)
 
-    # --- INSTANCED RENDERING SETUP ---
-    N_PARTICLES = 10000
-    physics = PhysicsEngine(N_PARTICLES)
-    
-    # Initial positions from physics engine
+    # --- INITIAL SCENARIO SETUP ---
+    physics = PhysicsEngine(N_PARTICLES, scenario=current_scenario)
     instance_positions = physics.positions.copy()
 
     instance_vbo = gl.glGenBuffers(1)
     gl.glBindBuffer(gl.GL_ARRAY_BUFFER, instance_vbo)
-    # Using GL_DYNAMIC_DRAW as we will update these positions every frame in Phase 4
     gl.glBufferData(gl.GL_ARRAY_BUFFER, instance_positions.nbytes, instance_positions, gl.GL_DYNAMIC_DRAW)
 
     # Attribute 2: Instance Offset (vec3)
     gl.glVertexAttribPointer(2, 3, gl.GL_FLOAT, gl.GL_FALSE, 3 * instance_positions.itemsize, gl.ctypes.c_void_p(0))
     gl.glEnableVertexAttribArray(2)
-    # This tells OpenGL to advance the attribute once per instance rather than once per vertex
     gl.glVertexAttribDivisor(2, 1) 
 
     gl.glBindVertexArray(0)
     
+    # --- KEY CALLBACK FOR SCENARIOS ---
+    def key_callback(win, key, scancode, action, mods):
+        nonlocal current_scenario, N_PARTICLES, physics, instance_vbo, instance_positions
+        if action == glfw.PRESS:
+            new_scenario = current_scenario
+            if key == glfw.KEY_1:
+                new_scenario = 1
+            elif key == glfw.KEY_2:
+                new_scenario = 2
+            elif key == glfw.KEY_3:
+                new_scenario = 3
+                
+            if new_scenario != current_scenario:
+                current_scenario = new_scenario
+                N_PARTICLES = 10000
+                physics = PhysicsEngine(N_PARTICLES, center_mass=10000.0, scenario=current_scenario)
+                instance_positions = physics.positions.copy()
+                gl.glBindBuffer(gl.GL_ARRAY_BUFFER, instance_vbo)
+                gl.glBufferData(gl.GL_ARRAY_BUFFER, instance_positions.nbytes, instance_positions, gl.GL_DYNAMIC_DRAW)
+
+    glfw.set_key_callback(window.window, key_callback)
+
     # --- SKYBOX SETUP ---
     skybox = Skybox()
 
-    time = 0.0
-
     while window.is_running():
         delta = window.update()
-        time += delta
         
         process_input(window.window, delta)
         
         # --- PHYSICS UPDATE ---
-        # Cap delta time to prevent physics explosion during lag spikes or window moves
-        sim_delta = min(delta, 0.05)
-        new_positions = physics.update(sim_delta)
+        # Apply time scale
+        sim_delta = min(delta, 0.05) * time_scale
         
-        # Update GPU VBO with new positions
-        gl.glBindBuffer(gl.GL_ARRAY_BUFFER, instance_vbo)
-        gl.glBufferSubData(gl.GL_ARRAY_BUFFER, 0, new_positions.nbytes, new_positions)
+        # Only update if time is moving
+        if sim_delta > 0.0:
+            new_positions = physics.update(sim_delta)
+            
+            # Update GPU VBO with new positions
+            gl.glBindBuffer(gl.GL_ARRAY_BUFFER, instance_vbo)
+            gl.glBufferSubData(gl.GL_ARRAY_BUFFER, 0, new_positions.nbytes, new_positions)
         
         gl.glClearColor(0.05, 0.05, 0.05, 1.0)
         gl.glClear(gl.GL_COLOR_BUFFER_BIT | gl.GL_DEPTH_BUFFER_BIT)
