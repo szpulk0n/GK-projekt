@@ -271,13 +271,12 @@ class Comet:
         if self.state != CometState.IDLE:
             return
         self._rebuild_mesh()
-        # Losowe wejscie z gory-przodu-boku
-        ang = np.random.uniform(0, 2*math.pi)
-        elev = np.random.uniform(-0.3, 0.3)
+        # Staly start z lewej strony ekranu (ujemna os X), lekko z przodu (dodatnie Z)
+        # Kamera patrzy z Z+ wiec kometa bedzie leciec z lewej strony widocznie
         self.position = np.array([
-            math.cos(ang) * self.START_DIST,
-            elev * self.START_DIST * 0.4,
-            math.sin(ang) * self.START_DIST,
+            -self.START_DIST,   # daleko z lewej strony
+            8.0,                 # lekko powyzej centrum (widoczna trajektoria)
+            30.0,                # blizej kamery (Z+), zeby lec w poprzek ekranu
         ], dtype=np.float32)
         # Kierunek: do centrum Ziemi (0,0,0) z malym losowym odchyleniem
         target = np.array([0.0, 0.0, 0.0], dtype=np.float32)
