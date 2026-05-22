@@ -384,85 +384,165 @@ def _draw_hud4(hud: 'HUDRenderer', vals, active, comet: 'Comet',
         return
 
     w, h = res
-    panel_x = 20
-    panel_y = h - 180
-    panel_w = 320
-    panel_h = 165
 
-    # Tło panelu (półprzezroczyste)
-    hud.draw_rect(panel_x-4, panel_y-4, panel_w+8, panel_h+8,
-                  0.0, 0.0, 0.0, 0.55, res)
+    # ── Kolory i ikony dla każdego suwaka ──────────────
+    SLIDER_COLORS = [
+        (0.25, 0.65, 1.00),   # niebieski  – rozmiar
+        (1.00, 0.45, 0.05),   # pomarancz  – predkosc
+        (0.75, 0.20, 0.90),   # fioletowy  – masa
+    ]
+    SLIDER_UNITS = [
+        "  (1=maly  10=ogromny)",
+        "  (j/s)",
+        "  (1=mala  10=ogromna)",
+    ]
+
+    # ── Wymiary panelu ─────────────────────────────────
+    panel_x = 18
+    panel_w = 380
+    ROW_H   = 58      # wysokosc jednego wiersza suwaka
+    HEADER  = 30
+    panel_h = HEADER + 3 * ROW_H + 10
+    panel_y = h - panel_h - 18
+
+    # Cien / ramka zewnetrzna
+    hud.draw_rect(panel_x - 3, panel_y - 3, panel_w + 6, panel_h + 6,
+                  0.0, 0.0, 0.0, 0.70, res)
+
+    # Tlo panelu
     hud.draw_rect(panel_x, panel_y, panel_w, panel_h,
-                  0.05, 0.08, 0.12, 0.75, res)
+                  0.04, 0.06, 0.10, 0.88, res)
 
     # Naglowek
-    hud.draw_rect(panel_x, panel_y+panel_h-22, panel_w, 22,
-                  0.10, 0.20, 0.35, 0.9, res)
+    hud.draw_rect(panel_x, panel_y + panel_h - HEADER, panel_w, HEADER,
+                  0.08, 0.16, 0.28, 0.95, res)
+    # Cienka linia pod naglowkiem
+    hud.draw_rect(panel_x, panel_y + panel_h - HEADER, panel_w, 2,
+                  0.20, 0.40, 0.70, 1.0, res)
 
+    # ── Suwaki ─────────────────────────────────────────
     for i in range(3):
-        row_y = panel_y + panel_h - 55 - i * 40
+        row_y   = panel_y + panel_h - HEADER - (i + 1) * ROW_H
         is_active = (i == active)
+        rc, gc, bc = SLIDER_COLORS[i]
 
-        # Podswietlenie aktywnego
+        # Podswietlenie aktywnego wiersza
         if is_active:
-            hud.draw_rect(panel_x+2, row_y-2, panel_w-4, 34,
-                          0.15, 0.30, 0.50, 0.5, res)
-            # Ramka
-            hud.draw_rect(panel_x+2, row_y-2, panel_w-4, 2,   0.4, 0.8, 1.0, 1.0, res)
-            hud.draw_rect(panel_x+2, row_y+32, panel_w-4, 2,   0.4, 0.8, 1.0, 1.0, res)
+            hud.draw_rect(panel_x + 1, row_y + 1, panel_w - 2, ROW_H - 2,
+                          rc * 0.12, gc * 0.12, bc * 0.12, 0.80, res)
+            # Lewa kolorowa kreska aktywnego
+            hud.draw_rect(panel_x, row_y, 4, ROW_H, rc, gc, bc, 1.0, res)
+            # Gorny / dolny border
+            hud.draw_rect(panel_x, row_y + ROW_H - 2, panel_w, 2, rc, gc, bc, 0.6, res)
+            hud.draw_rect(panel_x, row_y,              panel_w, 2, rc, gc, bc, 0.6, res)
+        else:
+            hud.draw_rect(panel_x, row_y, 2, ROW_H, rc * 0.5, gc * 0.5, bc * 0.5, 0.7, res)
 
-        # Pasek tla suwaka
-        bar_x = panel_x + 10
-        bar_y = row_y + 4
-        bar_w = panel_w - 20
-        bar_h = 12
+        # --- Pasek (tło + wypełnienie + uchwyt) ---
+        bar_x = panel_x + 14
+        bar_y = row_y + 8
+        bar_w = panel_w - 28
+        bar_h = 18    # grubszy pasek
 
-        hud.draw_rect(bar_x, bar_y, bar_w, bar_h, 0.15, 0.15, 0.15, 0.9, res)
+        # Cien pod paskiem
+        hud.draw_rect(bar_x + 2, bar_y - 2, bar_w, bar_h,
+                      0.0, 0.0, 0.0, 0.5, res)
+        # Tlo paska – ciemna szarosc
+        hud.draw_rect(bar_x, bar_y, bar_w, bar_h,
+                      0.12, 0.12, 0.14, 1.0, res)
 
-        # Wypelnienie suwaka
+        # Wypelnienie
         t = (vals[i] - mins[i]) / (maxs[i] - mins[i])
-        fill_w = int(bar_w * t)
+        fill_w = max(4, int(bar_w * t))
 
-        # Kolor zalezny od suwaka
-        colors = [(0.3, 0.7, 1.0), (1.0, 0.5, 0.1), (0.8, 0.2, 0.9)]
-        r, g, b = colors[i]
-        hud.draw_rect(bar_x, bar_y, fill_w, bar_h, r, g, b, 0.9, res)
+        # Gradient: ciemniejszy start → jasniejszy koniec (2-etapowy przez quady)
+        half = fill_w // 2
+        hud.draw_rect(bar_x, bar_y, half, bar_h,
+                      rc * 0.55, gc * 0.55, bc * 0.55, 1.0, res)
+        hud.draw_rect(bar_x + half, bar_y, fill_w - half, bar_h,
+                      rc, gc, bc, 1.0, res)
 
-        # Uchwyt suwaka
-        handle_x = bar_x + fill_w - 3
-        hud.draw_rect(handle_x, bar_y - 2, 6, bar_h + 4, 1.0, 1.0, 1.0, 1.0, res)
+        # Połysk na górze paska
+        hud.draw_rect(bar_x, bar_y + bar_h - 4, fill_w, 4,
+                      min(rc + 0.3, 1.0), min(gc + 0.3, 1.0), min(bc + 0.3, 1.0), 0.35, res)
+
+        # Uchwyt (bialy pionowy pasek)
+        hx = bar_x + fill_w - 4
+        hud.draw_rect(hx, bar_y - 3, 8, bar_h + 6, 1.0, 1.0, 1.0, 0.95, res)
+        hud.draw_rect(hx + 2, bar_y - 3, 4, bar_h + 6, rc, gc, bc, 0.6, res)
+
+        # Skala minimalna i maksymalna (krotkie kreski na koncach)
+        hud.draw_rect(bar_x, bar_y - 4, 2, 4, 0.5, 0.5, 0.5, 0.8, res)
+        hud.draw_rect(bar_x + bar_w - 2, bar_y - 4, 2, 4, 0.5, 0.5, 0.5, 0.8, res)
+
+        # --- Etykieta nazwy suwaka (kolorowy kwadracik + tekst jako kreseczki) ---
+        label_y = bar_y + bar_h + 5
+        # Kwadracik koloru
+        hud.draw_rect(bar_x, label_y, 10, 10, rc, gc, bc, 1.0, res)
+
+        # Wartość numeryczna – pasek proporcjonalny do cyfry (prosty "digit bar")
+        val_str = f"{vals[i]:.1f}"
+        # Rysujemy maly pasek wartosci obok etykiety, szerokosci proporcjonalnej
+        num_bar_x = bar_x + 16
+        num_bar_w = int(60 * t)
+        hud.draw_rect(num_bar_x, label_y + 1, 60, 8, 0.15, 0.15, 0.15, 0.8, res)
+        hud.draw_rect(num_bar_x, label_y + 1, num_bar_w, 8, rc * 0.8, gc * 0.8, bc * 0.8, 1.0, res)
+
+    # ── Separator ──────────────────────────────────────
+    sep_y = panel_y - 8
+    hud.draw_rect(panel_x, sep_y, panel_w, 1, 0.3, 0.3, 0.3, 0.5, res)
 
     # ── Status komety ──────────────────────────────────
-    status_y = panel_y - 50
-    state_map = {
-        'idle':   ((0.3, 0.3, 0.3), "IDLE  [ENTER = uruchom]"),
-        'flying': ((0.2, 0.8, 0.2), "LECI  w kierunku Ziemi!"),
-        'impact': ((1.0, 0.3, 0.0), "UDERZENIE!"),
-        'done':   ((0.6, 0.6, 0.6), "Koniec  [ENTER = nowa | R = reset]"),
+    STATUS = {
+        'idle':   ((0.40, 0.40, 0.40), (0.10, 0.10, 0.10)),
+        'flying': ((0.20, 0.85, 0.25), (0.03, 0.15, 0.04)),
+        'impact': ((1.00, 0.30, 0.00), (0.18, 0.04, 0.00)),
+        'done':   ((0.55, 0.55, 0.60), (0.08, 0.08, 0.10)),
     }
-    color, text_label = state_map.get(comet.state, ((1,1,1), comet.state))
-    r2, g2, b2 = color
+    (r2, g2, b2), (rb, gb, bb) = STATUS.get(comet.state, ((1,1,1), (0.1,0.1,0.1)))
 
-    # Status bar
-    hud.draw_rect(panel_x-4, status_y-4, panel_w+8, 36+8,
-                  0.0, 0.0, 0.0, 0.5, res)
-    hud.draw_rect(panel_x, status_y, panel_w, 36,
-                  r2*0.2, g2*0.2, b2*0.2, 0.85, res)
-    # Pasek koloru
-    hud.draw_rect(panel_x, status_y, 6, 36, r2, g2, b2, 1.0, res)
+    status_h = 38
+    status_y = panel_y - status_h - 12
 
-    # Impact progress bar
+    # Cien
+    hud.draw_rect(panel_x - 3, status_y - 3, panel_w + 6, status_h + 6,
+                  0.0, 0.0, 0.0, 0.55, res)
+    # Tlo
+    hud.draw_rect(panel_x, status_y, panel_w, status_h,
+                  rb, gb, bb, 0.92, res)
+    # Lewa krawedz kolorowa
+    hud.draw_rect(panel_x, status_y, 6, status_h, r2, g2, b2, 1.0, res)
+    # Gorny pasek koloru
+    hud.draw_rect(panel_x, status_y + status_h - 3, panel_w, 3, r2, g2, b2, 0.8, res)
+
+    # Pasek postępu uderzenia
     if comet.state == 'impact':
         t_imp = min(comet.impact_timer / comet.impact_duration, 1.0)
-        hud.draw_rect(panel_x + 8, status_y + 4, panel_w - 16, 10,
-                      0.2, 0.05, 0.0, 0.8, res)
-        hud.draw_rect(panel_x + 8, status_y + 4, int((panel_w-16)*t_imp), 10,
-                      1.0, 0.4, 0.0, 1.0, res)
+        hud.draw_rect(panel_x + 10, status_y + 8,  panel_w - 20, 14,
+                      0.15, 0.04, 0.01, 0.9, res)
+        imp_w = int((panel_w - 20) * t_imp)
+        hud.draw_rect(panel_x + 10, status_y + 8, imp_w, 14,
+                      1.0, 0.40, 0.0, 1.0, res)
+        hud.draw_rect(panel_x + 10, status_y + 18, imp_w, 4,
+                      1.0, 0.85, 0.3, 0.5, res)
 
-    # Instrukcja klawiszy
-    hint_y = 10
-    hud.draw_rect(0, hint_y, w, 22, 0.0, 0.0, 0.0, 0.45, res)
-    hud.draw_rect(0, hint_y, w, 2,  0.2, 0.3, 0.5, 0.6, res)
+    # ── Legenda klawiszy (dół ekranu) ─────────────────
+    keys_y = 0
+    keys_h = 28
+    hud.draw_rect(0, keys_y, w, keys_h, 0.02, 0.02, 0.04, 0.80, res)
+    hud.draw_rect(0, keys_y + keys_h - 2, w, 2, 0.15, 0.25, 0.40, 0.7, res)
+
+    # Kolorowe "przyciski" klawiszy
+    def key_btn(kx, ky, kw, r, g, b):
+        hud.draw_rect(kx, ky + 4, kw, 18, r*0.3, g*0.3, b*0.3, 0.9, res)
+        hud.draw_rect(kx, ky + 4, kw, 3,  r,     g,     b,     1.0, res)
+        hud.draw_rect(kx, ky + 19, kw, 3, r*0.5, g*0.5, b*0.5, 0.8, res)
+
+    key_btn(10,  keys_y, 55, 0.4, 0.8, 1.0)   # ← →
+    key_btn(75,  keys_y, 50, 0.4, 0.8, 1.0)   # SHIFT
+    key_btn(135, keys_y, 50, 0.2, 0.9, 0.3)   # ENTER
+    key_btn(195, keys_y, 30, 0.9, 0.3, 0.2)   # R
+    key_btn(235, keys_y, 70, 0.6, 0.6, 0.6)   # WASD/mysz
 
 
 if __name__ == "__main__":

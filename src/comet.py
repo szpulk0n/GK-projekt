@@ -334,7 +334,7 @@ class Comet:
 
             color = np.array([1.0, 0.5, 0.1], dtype=np.float32)
             self.particles.emit(
-                pos      = Earth.impact_point * (Earth.EARTH_RADIUS + 1.0),
+                pos      = Earth.impact_point * (Comet.EARTH_RADIUS + 1.0),
                 vel      = vdir * spd,
                 color    = color,
                 size     = self.size * 0.6,
@@ -370,7 +370,7 @@ class Comet:
                 tail_vel = np.random.randn(3).astype(np.float32) * self.speed * 0.5
                 color = np.array([1.0, 0.6, 0.1], dtype=np.float32)
                 self.particles.emit(
-                    pos      = Earth.impact_point * (Earth.EARTH_RADIUS + 0.5),
+                    pos      = Earth.impact_point * (Comet.EARTH_RADIUS + 0.5),
                     vel      = tail_vel,
                     color    = color,
                     size     = self.size * 0.8,
