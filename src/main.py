@@ -407,15 +407,15 @@ def _draw_hud4(hud: 'HUDRenderer', vals, active, comet: 'Comet',
 
     # Cien / ramka zewnetrzna
     hud.draw_rect(panel_x - 3, panel_y - 3, panel_w + 6, panel_h + 6,
-                  0.0, 0.0, 0.0, 0.70, res)
+                  0.3, 0.3, 0.3, 0.95, res)
 
-    # Tlo panelu
+    # Tlo panelu – jasne szaro-biale, zawsze widoczne
     hud.draw_rect(panel_x, panel_y, panel_w, panel_h,
-                  0.04, 0.06, 0.10, 0.88, res)
+                  0.88, 0.90, 0.92, 0.97, res)
 
-    # Naglowek
+    # Naglowek – ciemniejszy pasek u gory
     hud.draw_rect(panel_x, panel_y + panel_h - HEADER, panel_w, HEADER,
-                  0.08, 0.16, 0.28, 0.95, res)
+                  0.25, 0.35, 0.50, 0.97, res)
     # Cienka linia pod naglowkiem
     hud.draw_rect(panel_x, panel_y + panel_h - HEADER, panel_w, 2,
                   0.20, 0.40, 0.70, 1.0, res)
@@ -475,59 +475,9 @@ def _draw_hud4(hud: 'HUDRenderer', vals, active, comet: 'Comet',
         hud.draw_rect(bar_x, bar_y - 4, 2, 4, 0.5, 0.5, 0.5, 0.8, res)
         hud.draw_rect(bar_x + bar_w - 2, bar_y - 4, 2, 4, 0.5, 0.5, 0.5, 0.8, res)
 
-        # --- Etykieta suwaka z jasnym tlem i podpisem ---
-        label_y = bar_y + bar_h + 4
-        label_h = 20
-
-        # Jasne polprzezroczyste tlo pod calym wierszem etykiety (widoczne na ciemnym tle kosmosu)
-        hud.draw_rect(bar_x - 2, label_y - 2, bar_w + 4, label_h + 4,
-                      0.88, 0.90, 0.95, 0.22, res)
-        # Gorna linia koloru suwaka (obrys etykiety)
-        hud.draw_rect(bar_x - 2, label_y - 2, bar_w + 4, 2,
-                      rc, gc, bc, 0.6, res)
-        # Dolna linia
-        hud.draw_rect(bar_x - 2, label_y + label_h + 2, bar_w + 4, 1,
-                      rc, gc, bc, 0.3, res)
-
-        # Kolorowy kwadracik – ikona (identyfikator suwaka)
-        hud.draw_rect(bar_x, label_y + 5, 12, 12, rc, gc, bc, 1.0, res)
-        hud.draw_rect(bar_x + 2, label_y + 7, 8, 8, 1.0, 1.0, 1.0, 0.35, res)
-
-        # Pasek wartosci numerycznej – mini wizualizacja wartosci
-        num_bar_x = bar_x + 18
-        num_bar_total = 80
-        num_bar_w = int(num_bar_total * t)
-        # Tlo
-        hud.draw_rect(num_bar_x, label_y + 7, num_bar_total, 8, 0.10, 0.10, 0.12, 0.88, res)
-        # Wypelnienie
-        hud.draw_rect(num_bar_x, label_y + 7, num_bar_w, 8, rc * 0.9, gc * 0.9, bc * 0.9, 1.0, res)
-        # Polysek
-        hud.draw_rect(num_bar_x, label_y + 7, num_bar_w, 3, 1.0, 1.0, 1.0, 0.25, res)
-        # Kursor wartosci
-        if num_bar_w > 2:
-            hud.draw_rect(num_bar_x + num_bar_w - 2, label_y + 5, 3, 12,
-                          1.0, 1.0, 1.0, 0.95, res)
-
-        # Etykieta jednostki – jasne tlo, widoczne nawet na tle kosmosu
-        unit_bg_x = num_bar_x + num_bar_total + 8
-        unit_bg_w = bar_w - (unit_bg_x - bar_x) - 2
-        if unit_bg_w > 30:
-            # Jasniejsze tlo pod etykieta jednostki
-            hud.draw_rect(unit_bg_x, label_y + 3, unit_bg_w, label_h - 6,
-                          0.92, 0.94, 0.98, 0.30, res)
-            # Lewa krawedz kolorowa
-            hud.draw_rect(unit_bg_x, label_y + 3, 3, label_h - 6, rc, gc, bc, 0.85, res)
-            # Srodkowa linia pozioma jako skala wartosci min-max
-            scale_y = label_y + 12
-            hud.draw_rect(unit_bg_x + 6, scale_y, unit_bg_w - 12, 2, 0.55, 0.55, 0.60, 0.7, res)
-            # Znacznik min (lewy)
-            hud.draw_rect(unit_bg_x + 6, scale_y - 3, 2, 8, 0.65, 0.65, 0.70, 0.8, res)
-            # Znacznik max (prawy)
-            hud.draw_rect(unit_bg_x + unit_bg_w - 8, scale_y - 3, 2, 8, 0.65, 0.65, 0.70, 0.8, res)
-            # Aktualny znacznik wartosci (kolorowy, wyrazny)
-            cur_x = unit_bg_x + 6 + int((unit_bg_w - 14) * t)
-            hud.draw_rect(cur_x - 1, scale_y - 5, 4, 12, rc, gc, bc, 1.0, res)
-            hud.draw_rect(cur_x, scale_y - 5, 2, 12, 1.0, 1.0, 1.0, 0.5, res)
+        # --- Etykieta: kolorowy kwadracik (nazwa suwaka w SLIDER_NAMES) ---
+        label_y = bar_y + bar_h + 5
+        hud.draw_rect(bar_x, label_y, 10, 10, rc, gc, bc, 1.0, res)
 
     # ── Separator ──────────────────────────────────────
     sep_y = panel_y - 8
