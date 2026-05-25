@@ -110,7 +110,7 @@ class Earth:
 
     def update(self, delta_time: float):
         """Powolna rotacja Ziemi."""
-        self._rotation_y += delta_time * 2.0  # Zwiększona prędkość rotacji Ziemi
+        self._rotation_y += delta_time * 0.8  # Umiarkowanie spowolniona rotacja Ziemi
 
     def _build_model_matrix(self) -> np.ndarray:
         """Macierz modelu = rotacja Y * skala."""

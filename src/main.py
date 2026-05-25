@@ -476,9 +476,28 @@ def _draw_hud4(hud: 'HUDRenderer', vals, active, comet: 'Comet',
         hud.draw_rect(bar_x, bar_y - 4, 2, 4, 0.5, 0.5, 0.5, 0.8, res)
         hud.draw_rect(bar_x + bar_w - 2, bar_y - 4, 2, 4, 0.5, 0.5, 0.5, 0.8, res)
 
-        # --- Etykieta: kolorowy kwadracik (nazwa suwaka w SLIDER_NAMES) ---
-        label_y = bar_y + bar_h + 5
-        hud.draw_rect(bar_x, label_y, 10, 10, rc, gc, bc, 1.0, res)
+        # --- Etykieta: Litery zamiast kolorowych kwadratów (R/P/M) ---
+        label_y = bar_y + bar_h + 4
+        if i == 0:
+            # Litera R (Rozmiar)
+            hud.draw_rect(bar_x, label_y, 2, 10, rc, gc, bc, 1.0, res)       # pionowa kreska
+            hud.draw_rect(bar_x+2, label_y+8, 4, 2, rc, gc, bc, 1.0, res)    # góra
+            hud.draw_rect(bar_x+6, label_y+5, 2, 3, rc, gc, bc, 1.0, res)    # prawy brzuszek
+            hud.draw_rect(bar_x+2, label_y+4, 4, 2, rc, gc, bc, 1.0, res)    # srodek brzuszka
+            hud.draw_rect(bar_x+4, label_y, 2, 4, rc, gc, bc, 1.0, res)      # prawa noga skośna (blok)
+        elif i == 1:
+            # Litera P (Prędkość)
+            hud.draw_rect(bar_x, label_y, 2, 10, rc, gc, bc, 1.0, res)       # pionowa kreska
+            hud.draw_rect(bar_x+2, label_y+8, 4, 2, rc, gc, bc, 1.0, res)    # góra
+            hud.draw_rect(bar_x+6, label_y+5, 2, 3, rc, gc, bc, 1.0, res)    # prawy brzuszek
+            hud.draw_rect(bar_x+2, label_y+4, 4, 2, rc, gc, bc, 1.0, res)    # srodek brzuszka
+        elif i == 2:
+            # Litera M (Masa)
+            hud.draw_rect(bar_x, label_y, 2, 10, rc, gc, bc, 1.0, res)       # lewa pionowa
+            hud.draw_rect(bar_x+8, label_y, 2, 10, rc, gc, bc, 1.0, res)     # prawa pionowa
+            hud.draw_rect(bar_x+2, label_y+6, 2, 4, rc, gc, bc, 1.0, res)    # lewy skos wewnętrzny
+            hud.draw_rect(bar_x+4, label_y+4, 2, 3, rc, gc, bc, 1.0, res)    # środek skosów
+            hud.draw_rect(bar_x+6, label_y+6, 2, 4, rc, gc, bc, 1.0, res)    # prawy skos wewnętrzny
 
     # ── Separator ──────────────────────────────────────
     sep_y = panel_y - 8
