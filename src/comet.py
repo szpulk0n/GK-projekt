@@ -202,9 +202,9 @@ class OrbitalDebris:
     """
 
     G  = 0.5
-    GM = 0.5 * 10000.0 * 0.01
+    GM = 0.5 * 10000.0 * 0.04  # 4x większa grawitacja ziemi
 
-    MAX = 1000
+    MAX = 6000
 
     def __init__(self, shader: Shader):
         self.shader = shader
@@ -267,7 +267,7 @@ class OrbitalDebris:
     def spawn(self, impact_point: np.ndarray, earth_radius: float,
               comet_size: float, comet_mass: float, comet_speed: float, comet_direction: np.ndarray):
         """Wyrzut kostek po zderzeniu, przeciwnie do lotu komety i jako ejecta krateru."""
-        n = min(int(100 + comet_mass * 15 + comet_size * 5), self.MAX)
+        n = min(int(300 + comet_mass * 80 + comet_size * 250), self.MAX)
 
         up = impact_point
         # Wektor odskoku to mix wektora zderzenia ("w górę" krateru) z odwróconym ruchem komety

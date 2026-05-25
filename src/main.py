@@ -364,11 +364,12 @@ def main() -> None:
             earth.draw(view, projection, cam_pos)
             comet.draw(view, projection, cam_pos)
 
+        skybox.draw(view, projection)
+
+        if current_scenario == 4 and sc4_ready and comet.state == CometState.IDLE:
             # ── HUD ──────────────────────────────────────
             _draw_hud4(hud, slider_vals, active_slider, comet, (cw, ch),
                        SLIDER_NAMES, SLIDER_MIN, SLIDER_MAX)
-
-        skybox.draw(view, projection)
 
     window.terminate()
 
