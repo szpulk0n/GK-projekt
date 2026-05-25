@@ -196,15 +196,15 @@ class ParticleSystem:
 
 class OrbitalDebris:
     """
-    Fragmenty komety krazace wokol Ziemi po uderzeniu.
-    Fizyka identyczna ze Scenariuszem 1: v = sqrt(G*M / r),
-    grawitacja centralna aktualizowana co klatke.
+    Fragmenty komety krazace wokol Ziemi po uderzeniu, renderowane jako instancjonowane sześciany!
+    Fizyka odskoku uwzględniająca kierunek wejścia, działająca pod wpływem
+    grawitacji kuli ziemskiej z zachowaniem kolizji z planetą (sprężyście).
     """
 
-    G  = 0.5        # stala grawitacyjna (ta sama co PhysicsEngine)
-    GM = 0.5 * 10000.0 * 0.01   # G * masa_ziemi_sceny (dobrana empirycznie)
+    G  = 0.5
+    GM = 0.5 * 10000.0 * 0.01
 
-    MAX = 300
+    MAX = 1000
 
     def __init__(self, shader: Shader):
         self.shader = shader
@@ -212,30 +212,52 @@ class OrbitalDebris:
 
         self.pos = np.zeros((self.MAX, 3), dtype=np.float32)
         self.vel = np.zeros((self.MAX, 3), dtype=np.float32)
-        self.col = np.zeros((self.MAX, 3), dtype=np.float32)
-        self.sz  = np.zeros(self.MAX,      dtype=np.float32)
 
-        self.vao      = gl.glGenVertexArrays(1)
-        self.pos_vbo  = gl.glGenBuffers(1)
-        self.col_vbo  = gl.glGenBuffers(1)
-        self.size_vbo = gl.glGenBuffers(1)
+        # ── Cube vertices (identycznie jak w scenariuszu 1, 2, 3) ──
+        vertices = np.array([
+            # Back face
+            -0.5,-0.5,-0.5, 1.0,0.0,0.0,  0.5,-0.5,-0.5, 0.0,1.0,0.0,  0.5,0.5,-0.5, 0.0,0.0,1.0,
+             0.5, 0.5,-0.5, 0.0,0.0,1.0, -0.5,0.5,-0.5, 1.0,1.0,0.0, -0.5,-0.5,-0.5, 1.0,0.0,0.0,
+            # Front face
+            -0.5,-0.5,0.5, 1.0,0.0,0.0,  0.5,-0.5,0.5, 0.0,1.0,0.0,  0.5,0.5,0.5, 0.0,0.0,1.0,
+             0.5, 0.5,0.5, 0.0,0.0,1.0, -0.5,0.5,0.5, 1.0,1.0,0.0, -0.5,-0.5,0.5, 1.0,0.0,0.0,
+            # Left face
+            -0.5,0.5,0.5, 1.0,0.0,1.0, -0.5,0.5,-0.5, 0.0,1.0,1.0, -0.5,-0.5,-0.5, 1.0,1.0,1.0,
+            -0.5,-0.5,-0.5,1.0,1.0,1.0,-0.5,-0.5,0.5, 0.0,0.0,0.0, -0.5,0.5,0.5, 1.0,0.0,1.0,
+            # Right face
+            0.5,0.5,0.5, 1.0,0.0,1.0,  0.5,0.5,-0.5, 0.0,1.0,1.0,  0.5,-0.5,-0.5, 1.0,1.0,1.0,
+            0.5,-0.5,-0.5,1.0,1.0,1.0, 0.5,-0.5,0.5, 0.0,0.0,0.0,  0.5,0.5,0.5, 1.0,0.0,1.0,
+            # Bottom face
+            -0.5,-0.5,-0.5,0.5,0.5,0.5, 0.5,-0.5,-0.5,0.5,0.0,0.0, 0.5,-0.5,0.5,0.0,0.5,0.0,
+             0.5,-0.5, 0.5,0.0,0.5,0.0,-0.5,-0.5,0.5,0.0,0.0,0.5, -0.5,-0.5,-0.5,0.5,0.5,0.5,
+            # Top face
+            -0.5,0.5,-0.5,0.5,0.5,0.5, 0.5,0.5,-0.5,0.5,0.0,0.0,  0.5,0.5,0.5,0.0,0.5,0.0,
+             0.5,0.5, 0.5,0.0,0.5,0.0,-0.5,0.5,0.5,0.0,0.0,0.5, -0.5,0.5,-0.5,0.5,0.5,0.5,
+        ], dtype=np.float32)
+
+        self.vao = gl.glGenVertexArrays(1)
+        self.vbo = gl.glGenBuffers(1)
 
         gl.glBindVertexArray(self.vao)
 
-        gl.glBindBuffer(gl.GL_ARRAY_BUFFER, self.pos_vbo)
-        gl.glBufferData(gl.GL_ARRAY_BUFFER, self.pos.nbytes, self.pos, gl.GL_DYNAMIC_DRAW)
-        gl.glVertexAttribPointer(0, 3, gl.GL_FLOAT, gl.GL_FALSE, 0, None)
-        gl.glEnableVertexAttribArray(0)
+        gl.glBindBuffer(gl.GL_ARRAY_BUFFER, self.vbo)
+        gl.glBufferData(gl.GL_ARRAY_BUFFER, vertices.nbytes, vertices, gl.GL_STATIC_DRAW)
 
-        gl.glBindBuffer(gl.GL_ARRAY_BUFFER, self.col_vbo)
-        gl.glBufferData(gl.GL_ARRAY_BUFFER, self.col.nbytes, self.col, gl.GL_DYNAMIC_DRAW)
-        gl.glVertexAttribPointer(1, 3, gl.GL_FLOAT, gl.GL_FALSE, 0, None)
+        # attr 0: pozycje siatki sześcianu
+        gl.glVertexAttribPointer(0, 3, gl.GL_FLOAT, gl.GL_FALSE, 6*vertices.itemsize, gl.ctypes.c_void_p(0))
+        gl.glEnableVertexAttribArray(0)
+        # attr 1: kolory siatki (chociaż basic.vert korzysta potem z odległości, trzeba to przepuścić)
+        gl.glVertexAttribPointer(1, 3, gl.GL_FLOAT, gl.GL_FALSE, 6*vertices.itemsize, gl.ctypes.c_void_p(3*vertices.itemsize))
         gl.glEnableVertexAttribArray(1)
 
-        gl.glBindBuffer(gl.GL_ARRAY_BUFFER, self.size_vbo)
-        gl.glBufferData(gl.GL_ARRAY_BUFFER, self.sz.nbytes, self.sz, gl.GL_DYNAMIC_DRAW)
-        gl.glVertexAttribPointer(2, 1, gl.GL_FLOAT, gl.GL_FALSE, 0, None)
+        self.instance_vbo = gl.glGenBuffers(1)
+        gl.glBindBuffer(gl.GL_ARRAY_BUFFER, self.instance_vbo)
+        gl.glBufferData(gl.GL_ARRAY_BUFFER, self.pos.nbytes, self.pos, gl.GL_DYNAMIC_DRAW)
+
+        # attr 2: instanced pozycji (aOffset)
+        gl.glVertexAttribPointer(2, 3, gl.GL_FLOAT, gl.GL_FALSE, 3*self.pos.itemsize, gl.ctypes.c_void_p(0))
         gl.glEnableVertexAttribArray(2)
+        gl.glVertexAttribDivisor(2, 1)
 
         gl.glBindVertexArray(0)
 
@@ -243,59 +265,78 @@ class OrbitalDebris:
         self.n = 0
 
     def spawn(self, impact_point: np.ndarray, earth_radius: float,
-              comet_size: float, comet_mass: float, comet_speed: float):
-        """Rozmiesc fragmenty na orbitach wokol Ziemi – identycznie jak Scen. 1."""
-        n = min(int(30 + comet_mass * 10 + comet_size * 4), self.MAX)
+              comet_size: float, comet_mass: float, comet_speed: float, comet_direction: np.ndarray):
+        """Wyrzut kostek po zderzeniu, przeciwnie do lotu komety i jako ejecta krateru."""
+        n = min(int(100 + comet_mass * 15 + comet_size * 5), self.MAX)
 
-        # Promienie orbit: tuż nad powierzchnią Ziemi do ~3x promień
-        r = np.random.uniform(earth_radius * 1.2, earth_radius * 3.0, n).astype(np.float32)
+        up = impact_point
+        # Wektor odskoku to mix wektora zderzenia ("w górę" krateru) z odwróconym ruchem komety
+        rebound_base = np.copy(up) * 0.5 - comet_direction * 0.5
+        v_norm = np.linalg.norm(rebound_base)
+        if v_norm > 0: rebound_base /= v_norm
 
-        # Losowe katy w plaszczyzne XZ (glowna orbita) + maly przesuniecie Y
-        theta = np.random.uniform(0, 2 * np.pi, n).astype(np.float32)
+        arbitrary = np.array([1.0, 0.0, 0.0], dtype=np.float32) if abs(up[0]) < 0.9 else np.array([0.0, 1.0, 0.0], dtype=np.float32)
+        tangent1 = np.cross(up, arbitrary)
+        tangent1 /= np.linalg.norm(tangent1)
+        tangent2 = np.cross(up, tangent1)
 
-        self.pos[:n, 0] = r * np.cos(theta)
-        self.pos[:n, 1] = np.random.uniform(-earth_radius * 0.3,
-                                             earth_radius * 0.3, n).astype(np.float32)
-        self.pos[:n, 2] = r * np.sin(theta)
+        v_escape = np.sqrt(2 * self.GM / earth_radius)
+        base_pos = up * (earth_radius)
 
-        # Predkosc orbitalna kolowa: v = sqrt(GM / r)  (styl Scen. 1)
-        v_mag = np.sqrt(self.GM / r)
+        for i in range(n):
+            u = np.random.uniform(-1, 1)
+            v = np.random.uniform(-1, 1)
+            offset = (tangent1 * u + tangent2 * v) * (comet_size * 0.4)
+            self.pos[i] = base_pos + offset
 
-        # Wektor styczny w plaszczyzne XZ (prostopadly do promienia)
-        self.vel[:n, 0] = -self.pos[:n, 2] / r * v_mag
-        self.vel[:n, 1] = np.random.uniform(-0.5, 0.5, n).astype(np.float32)
-        self.vel[:n, 2] =  self.pos[:n, 0] / r * v_mag
+            # Przewaga wyrzutu odskakującego wraz z domieszką tangensową, żeby orbitowały
+            kick_out = rebound_base * np.random.uniform(0.5, 1.3)
+            kick_tangent = (tangent1 * np.random.uniform(-1, 1) + tangent2 * np.random.uniform(-1, 1)) * 1.5
+            
+            dir_vec = kick_out + kick_tangent
+            
+            # Ich prędkość jest bazowana na sile zderzenia (prędkości ucieczki * mnożnik)
+            spd = v_escape * np.random.uniform(0.3, 1.1)
+            
+            self.vel[i] = (dir_vec / np.linalg.norm(dir_vec)) * spd
 
-        # Kolory: ciepla skala od pomaranczu do szarosci (gruz/skala)
-        t_col = np.linspace(0, 1, n, dtype=np.float32)
-        self.col[:n, 0] = 0.95 - t_col * 0.35
-        self.col[:n, 1] = 0.60 - t_col * 0.30
-        self.col[:n, 2] = 0.15 + t_col * 0.30
-
-        self.sz[:n] = np.random.uniform(3.0, 6.0 + comet_size * 0.5, n).astype(np.float32)
         self.n = n
 
     def update(self, dt: float):
         if self.n == 0:
             return
         n = self.n
-        # Grawitacja centralna – identyczna z PhysicsEngine.update() Scen. 1
         pos = self.pos[:n]
         r2  = np.sum(pos ** 2, axis=1, keepdims=True) + 1e-9
         r1  = np.sqrt(r2)
-        acc = -self.GM * pos / (r1 * r2)   # a = -GM*r / |r|^3
+        acc = -self.GM * pos / (r1 * r2)
 
         self.vel[:n] += acc * dt
         self.pos[:n] += self.vel[:n] * dt
 
+        # Kolizja z Ziemią
+        hits = (r1.flatten() < 10.0)
+        if np.any(hits):
+            normal = pos[hits] / r1[hits]
+            dot = np.sum(self.vel[:n][hits] * normal, axis=1, keepdims=True)
+            
+            moving_in = (dot.flatten() < 0)
+            hits_in = hits.copy()
+            hits_in[hits] = moving_in
+            
+            if np.any(hits_in):
+                normal_in = pos[hits_in] / r1[hits_in]
+                dot_in = np.sum(self.vel[:n][hits_in] * normal_in, axis=1, keepdims=True)
+                
+                # Sprężysty odskok ze stratą (0.8)
+                self.vel[:n][hits_in] -= 1.8 * dot_in * normal_in
+                # Korekcja pozycji
+                self.pos[:n][hits_in] += normal_in * (10.01 - r1[hits_in])
+
     def _upload(self):
         n = self.n
-        gl.glBindBuffer(gl.GL_ARRAY_BUFFER, self.pos_vbo)
+        gl.glBindBuffer(gl.GL_ARRAY_BUFFER, self.instance_vbo)
         gl.glBufferSubData(gl.GL_ARRAY_BUFFER, 0, self.pos[:n].nbytes, self.pos[:n])
-        gl.glBindBuffer(gl.GL_ARRAY_BUFFER, self.col_vbo)
-        gl.glBufferSubData(gl.GL_ARRAY_BUFFER, 0, self.col[:n].nbytes, self.col[:n])
-        gl.glBindBuffer(gl.GL_ARRAY_BUFFER, self.size_vbo)
-        gl.glBufferSubData(gl.GL_ARRAY_BUFFER, 0, self.sz[:n].nbytes, self.sz[:n])
 
     def draw(self, view: np.ndarray, projection: np.ndarray):
         if self.n == 0:
@@ -306,15 +347,11 @@ class OrbitalDebris:
                               1, gl.GL_FALSE, view.T.copy())
         gl.glUniformMatrix4fv(gl.glGetUniformLocation(self.shader.program_id, "projection"),
                               1, gl.GL_FALSE, projection.T.copy())
-        gl.glEnable(gl.GL_PROGRAM_POINT_SIZE)
-        gl.glEnable(gl.GL_BLEND)
-        gl.glBlendFunc(gl.GL_SRC_ALPHA, gl.GL_ONE)
-        gl.glDepthMask(gl.GL_FALSE)
+        
+        gl.glEnable(gl.GL_DEPTH_TEST)
         gl.glBindVertexArray(self.vao)
-        gl.glDrawArrays(gl.GL_POINTS, 0, self.n)
+        gl.glDrawArraysInstanced(gl.GL_TRIANGLES, 0, 36, self.n)
         gl.glBindVertexArray(0)
-        gl.glDepthMask(gl.GL_TRUE)
-        gl.glDisable(gl.GL_BLEND)
 
 
 # ─────────────────────────────────────────────
@@ -351,6 +388,10 @@ class Comet:
             os.path.join(base_dir, "shaders", "particle.vert"),
             os.path.join(base_dir, "shaders", "particle.frag"),
         )
+        self.basic_shader = Shader(
+            os.path.join(base_dir, "shaders", "basic.vert"),
+            os.path.join(base_dir, "shaders", "basic.frag"),
+        )
 
         # Parametry konfigurowalne
         self.size  = 3.0   # promien elipsoidy
@@ -372,7 +413,7 @@ class Comet:
         self.particles = ParticleSystem(self.particle_shader)
 
         # System fragmentow orbitalnych
-        self.orbital_debris = OrbitalDebris(self.particle_shader)
+        self.orbital_debris = OrbitalDebris(self.basic_shader)
 
     def _rebuild_mesh(self):
         """Przebuduj siatke elipsoidy przy zmianie rozmiaru."""
@@ -541,6 +582,7 @@ class Comet:
             comet_size   = self.size,
             comet_mass   = self.mass,
             comet_speed  = self.speed,
+            comet_direction = self.direction,
         )
 
     def draw(self, view: np.ndarray, projection: np.ndarray, camera_pos: np.ndarray):
